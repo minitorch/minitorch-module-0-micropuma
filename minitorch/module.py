@@ -26,18 +26,24 @@ class Module:
 
     def modules(self) -> Sequence[Module]:
         """Return the direct child modules of this module."""
+        # 从当前上下文的_modules属性中获取value
         m: Dict[str, Module] = self.__dict__["_modules"]
         return list(m.values())
 
     def train(self) -> None:
         """Set the mode of this module and all descendent modules to `train`."""
         # TODO: Implement for Task 0.4.
-        raise NotImplementedError("Need to implement for Task 0.4")
-
+        # recursively train the current module and all descendent modules1
+        self.training = True
+        for module in self.modules():
+            module.train()
+          
     def eval(self) -> None:
         """Set the mode of this module and all descendent modules to `eval`."""
         # TODO: Implement for Task 0.4.
-        raise NotImplementedError("Need to implement for Task 0.4")
+        self.training = False
+        for module in self.modules():
+            module.eval() 
 
     def named_parameters(self) -> Sequence[Tuple[str, Parameter]]:
         """Collect all the parameters of this module and its descendents.
@@ -48,12 +54,33 @@ class Module:
 
         """
         # TODO: Implement for Task 0.4.
-        raise NotImplementedError("Need to implement for Task 0.4")
+        params = []
+        # collect named_parameters of this module
+        for name,param in self._parameters.items():
+            params.append((name, param))
+
+        # test0_4 stacked module need stacked name
+        for module_name, module in self._modules.items():
+            child_params = module.named_parameters()
+            for name, param in child_params:
+                name = f"{module_name}.{name}"
+                params.append((name, param))
+
+        return params
 
     def parameters(self) -> Sequence[Parameter]:
         """Enumerate over all the parameters of this module and its descendents."""
         # TODO: Implement for Task 0.4.
-        raise NotImplementedError("Need to implement for Task 0.4")
+        params = []
+        for _,param in self._parameters.items():
+                params.append(param)
+
+        for module in self.modules():
+            child_params = module.parameters()
+            for param in child_params:
+                params.append(param)  
+
+        return params
 
     def add_parameter(self, k: str, v: Any) -> Parameter:
         """Manually add a parameter. Useful helper for scalar parameters.
@@ -129,6 +156,7 @@ class Parameter:
     def __init__(self, x: Any, name: Optional[str] = None) -> None:
         self.value = x
         self.name = name
+        # check whether a value has attribute requires_grad
         if hasattr(x, "requires_grad_"):
             self.value.requires_grad_(True)
             if self.name:
